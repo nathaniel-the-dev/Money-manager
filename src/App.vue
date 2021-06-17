@@ -39,10 +39,15 @@
 	import Error from '@/components/Error.vue';
 
 	import gsap from 'gsap';
+	import { ipcRenderer } from 'electron';
 
 	export default {
 		name: 'App',
 		components: { Home, Entries, Reminders, Alert, Error },
+		created() {
+			// Only show window when content is loaded
+			window.addEventListener('load', () => ipcRenderer.emit('load'));
+		},
 
 		mounted() {
 			// Only allow login when online

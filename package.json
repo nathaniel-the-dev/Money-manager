@@ -3,6 +3,9 @@
 	"version": "2.3.0",
 	"private": true,
 	"license": "MIT",
+	"author": "Natscamp Productions",
+	"description": "A simple money manager app",
+	"main": "background.js",
 	"scripts": {
 		"serve": "vue-cli-service serve",
 		"build": "vue-cli-service build",
@@ -11,7 +14,6 @@
 		"postinstall": "electron-builder install-app-deps",
 		"postuninstall": "electron-builder install-app-deps"
 	},
-	"main": "background.js",
 	"dependencies": {
 		"core-js": "^3.6.5",
 		"gsap": "^3.6.1",

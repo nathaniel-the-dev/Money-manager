@@ -1,7 +1,7 @@
 'use strict';
 
 import path from 'path';
-import { app, Tray, Menu, protocol, BrowserWindow } from 'electron';
+import { app, Tray, Menu, protocol, BrowserWindow, ipcMain } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -13,35 +13,39 @@ let win, tray;
 
 // Functions
 function createTray() {
-	// Initilization
-	tray = new Tray(path.join(__dirname, '../public/icons/favicon.png'));
-	const contextMenu = Menu.buildFromTemplate([
-		{
-			label: 'Open',
-			toolTip: 'Open Money Manager',
-			click() {
-				win.show();
-				tray.destroy();
+	try {
+		// Initilization
+		tray = new Tray(path.join(__static, 'favicon.png'));
+		const contextMenu = Menu.buildFromTemplate([
+			{
+				label: 'Open',
+				toolTip: 'Open Money Manager',
+				click() {
+					win.show();
+					tray.destroy();
+				},
 			},
-		},
-		{
-			label: 'Exit',
-			toolTip: 'Exit Money Manager',
-			click() {
-				app.exit();
+			{
+				label: 'Exit',
+				toolTip: 'Exit Money Manager',
+				click() {
+					app.exit();
+				},
 			},
-		},
-	]);
+		]);
 
-	// Tray variables
-	tray.setToolTip('Money Manager');
-	tray.setContextMenu(contextMenu);
+		// Tray variables
+		tray.setToolTip('Money Manager');
+		tray.setContextMenu(contextMenu);
 
-	// Tray actions
-	tray.on('double-click', () => {
-		win.show();
-		tray.destroy();
-	});
+		// Tray actions
+		tray.on('double-click', () => {
+			win.show();
+			tray.destroy();
+		});
+	} catch (error) {
+		console.error(error);
+	}
 }
 
 function minimizeToTray(e) {
@@ -51,7 +55,7 @@ function minimizeToTray(e) {
 	// Create tray icon
 	createTray();
 
-	// Hide windows
+	// Hide window
 	win.hide();
 }
 
@@ -64,11 +68,10 @@ async function createMainWindow() {
 		title: 'Money Manager',
 		minWidth: 1080,
 		minHeight: 720,
-		icon: path.join(__dirname, '../public/icons/favicon.png'),
-		autoHideMenuBar: true,
+		icon: path.join(__static, 'favicon.png'),
 
-		devTools: isDevelopment,
 		webPreferences: {
+			devTools: isDevelopment,
 			// Use pluginOptions.nodeIntegration, leave this alone
 			// See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
 			nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
@@ -88,9 +91,10 @@ async function createMainWindow() {
 	// Window actions
 	win.maximize();
 	win.on('close', minimizeToTray);
+	Menu.setApplicationMenu(null);
 
-	// Show window
-	win.once('ready-to-show', win.show);
+	// Show window when content is loaded
+	ipcMain.on('load', win.show);
 }
 
 // Quit when all windows are closed.
