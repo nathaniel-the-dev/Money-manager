@@ -4,10 +4,12 @@
 		<h1>Loading<span>...</span></h1>
 	</div>
 
-	<div class="login__container" v-if="showLoginForm">
-		<iframe class="login__form" src="https://natscamp-money-manager.herokuapp.com/login" frameborder="0" @load="loading = false"></iframe>
-		<!-- <button class="login__form--close" type="button" @click="showLoginForm = false">❌</button> -->
-	</div>
+	<transition name="loginForm">
+		<div class="login__container" v-if="showLoginForm">
+			<iframe class="login__form" src="https://natscamp-money-manager.herokuapp.com/login" frameborder="0" @load="loading = false"></iframe>
+			<!-- <button class="login__form--close" type="button" @click="showLoginForm = false">❌</button> -->
+		</div>
+	</transition>
 
 	<main class="main__content">
 		<div class="tabs">
@@ -327,6 +329,15 @@
 
 	.errMessage {
 		margin: 50px auto;
+	}
+
+	/* Login Transitions*/
+	.loginForm-leave-to {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.25);
+	}
+	.loginForm-leave-active {
+		transition: all 0.5s ease;
 	}
 
 	/* Tab Transitions */
