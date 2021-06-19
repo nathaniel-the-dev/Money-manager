@@ -10,6 +10,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { secure: tru
 
 // Declarations
 let win, tray;
+let firstLoad = true;
 
 // Functions
 function createTray() {
@@ -43,6 +44,8 @@ function createTray() {
 			win.show();
 			tray.destroy();
 		});
+
+		if (firstLoad) tray.displayBalloon({ iconType: 'info', title: 'Money Manager', content: 'App minimized to tray' });
 	} catch (error) {
 		console.error(error);
 	}
@@ -94,6 +97,7 @@ async function createMainWindow() {
 
 	// Show window when content is loaded
 	win.webContents.on('did-stop-loading', () => win.show());
+	firstLoad = false;
 }
 
 // Quit when all windows are closed.
