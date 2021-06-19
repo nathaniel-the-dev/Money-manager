@@ -1,12 +1,15 @@
 <template>
 	<div id="background"></div>
+	<div class="loading__screen" v-if="loading">
+		<h1>Loading<span>...</span></h1>
+	</div>
 
 	<div class="login__container" v-if="showLoginForm">
-		<iframe class="login__form" src="https://natscamp-money-manager.herokuapp.com/login" frameborder="0"></iframe>
+		<iframe class="login__form" src="https://natscamp-money-manager.herokuapp.com/login" frameborder="0" @load="loading = false"></iframe>
 		<!-- <button class="login__form--close" type="button" @click="showLoginForm = false">❌</button> -->
 	</div>
 
-	<main class="main__content" ref="main">
+	<main class="main__content">
 		<div class="tabs">
 			<button class="tab" :class="{ active: tab.isActive }" v-for="tab in tabs" :title="tab.name" :key="tab.id" @click="switchTab(tab.id)">{{ tab.icon }}</button>
 		</div>
@@ -39,15 +42,10 @@
 	import Error from '@/components/Error.vue';
 
 	import gsap from 'gsap';
-	import { ipcRenderer } from 'electron';
 
 	export default {
 		name: 'App',
 		components: { Home, Entries, Reminders, Alert, Error },
-		created() {
-			// Only show window when content is loaded
-			window.addEventListener('load', () => ipcRenderer.emit('load'));
-		},
 
 		mounted() {
 			// Only allow login when online
@@ -67,6 +65,7 @@
 					{ id: 2, name: 'Reminders', icon: '🔔', isActive: false },
 				],
 
+				loading: true,
 				showLoginForm: true,
 				loggedIn: false,
 
@@ -184,6 +183,10 @@
 </script>
 
 <style>
+	:root {
+		--bg-color: #2e2c29;
+	}
+
 	body {
 		margin: 0;
 		padding: 0;
@@ -204,7 +207,7 @@
 	#background {
 		background: url('./assets/background.jpg') fixed;
 		background-size: cover;
-		outline: 2px solid black;
+		outline: 2px solid var(--bg-color);
 		filter: blur(3px);
 
 		width: 100%;
@@ -214,6 +217,49 @@
 		top: 0;
 		left: 0;
 		z-index: -1;
+	}
+
+	.loading__screen {
+		background: var(--bg-color);
+
+		width: 100vw;
+		height: 100vh;
+
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+	}
+	.loading__screen > h1 {
+		color: white;
+		font-family: 'Roboto Slab', serif;
+		font-size: 4rem;
+		text-align: center;
+		text-transform: uppercase;
+	}
+	.loading__screen > h1 span {
+		position: relative;
+		isolation: isolate;
+	}
+	.loading__screen > h1 span::after {
+		content: '';
+		background: var(--bg-color);
+		height: 100%;
+		position: absolute;
+		inset: 0;
+
+		animation: loading 3s steps(4, jump-none) infinite;
+	}
+	@keyframes loading {
+		0% {
+			left: 0;
+		}
+		100% {
+			left: 100%;
+		}
 	}
 
 	.main__content {

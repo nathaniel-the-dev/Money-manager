@@ -71,7 +71,6 @@ async function createMainWindow() {
 		icon: path.join(__static, 'favicon.png'),
 
 		webPreferences: {
-			devTools: isDevelopment,
 			// Use pluginOptions.nodeIntegration, leave this alone
 			// See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
 			nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
@@ -91,10 +90,10 @@ async function createMainWindow() {
 	// Window actions
 	win.maximize();
 	win.on('close', minimizeToTray);
-	Menu.setApplicationMenu(null);
+	if (!isDevelopment) Menu.setApplicationMenu(null);
 
 	// Show window when content is loaded
-	ipcMain.on('load', win.show);
+	win.webContents.on('did-stop-loading', () => win.show());
 }
 
 // Quit when all windows are closed.
