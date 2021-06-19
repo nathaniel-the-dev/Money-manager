@@ -1,7 +1,7 @@
 'use strict';
 
 import path from 'path';
-import { app, Tray, Menu, protocol, BrowserWindow, ipcMain } from 'electron';
+import { app, Tray, Menu, protocol, BrowserWindow } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -45,7 +45,10 @@ function createTray() {
 			tray.destroy();
 		});
 
-		if (firstLoad) tray.displayBalloon({ iconType: 'info', title: 'Money Manager', content: 'App minimized to tray' });
+		if (firstLoad) {
+			tray.displayBalloon({ iconType: 'info', title: 'Money Manager', content: 'App minimized to tray' });
+			firstLoad = false;
+		}
 	} catch (error) {
 		console.error(error);
 	}
@@ -97,7 +100,6 @@ async function createMainWindow() {
 
 	// Show window when content is loaded
 	win.webContents.on('did-stop-loading', () => win.show());
-	firstLoad = false;
 }
 
 // Quit when all windows are closed.
