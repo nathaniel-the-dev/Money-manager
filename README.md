@@ -37,7 +37,7 @@ An app to track incomes and expenses. It also allows users to create reminders.
 -   Added animations
 -   Added Desktop Notifications
 
-*   Bugfixes and optimizations
+-   Bugfixes and optimizations
 
 ### _Version 0.1.0_
 
