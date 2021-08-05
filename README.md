@@ -30,13 +30,10 @@ An app to track incomes and expenses. It also allows users to create reminders.
 -   Added reminder alerts
 -   Added entry and reminder summaries to home tab
 -   Added reminder fields
-
 -   Added form validation
-
 -   Changed UI
 -   Added animations
 -   Added Desktop Notifications
-
 -   Bugfixes and optimizations
 
 ### _Version 0.1.0_
