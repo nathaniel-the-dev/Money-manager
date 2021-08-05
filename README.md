@@ -4,6 +4,11 @@ An app to track incomes and expenses. It also allows users to create reminders.
 
 ## Changelog
 
+### _Version 2.4.0_
+
+-   Now able to backup data online
+-   Minor bug fixes
+
 ### _Version 2.3.0_
 
 -   Added login feature
