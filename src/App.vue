@@ -7,7 +7,6 @@
 	<transition name="loginForm">
 		<div class="login__container" v-if="showLoginForm">
 			<iframe class="login__form" src="https://natscamp-money-manager.herokuapp.com/login" frameborder="0" @load="loading = false"></iframe>
-			<!-- <button class="login__form--close" type="button" @click="showLoginForm = false">❌</button> -->
 		</div>
 	</transition>
 
@@ -18,8 +17,8 @@
 
 		<transition-group tag="div" class="app__screen" name="tabs" appear>
 			<Home v-show="tabs[0].isActive" :key="0" @switchToEntry="switchToEntry" @switchToReminder="switchToReminder" />
-			<Entries v-show="tabs[1].isActive" :key="1" :selectedEntry="goToEntry" @validationError="showError" />
-			<Reminders v-show="tabs[2].isActive" :key="2" :selectedReminder="goToReminder" @validationError="showError" @alert="alertReminder" />
+			<Entries v-show="tabs[1].isActive" :key="1" :selectedEntry="goToEntry" @syncEntry="syncEntry" @validationError="showValidationError" />
+			<Reminders v-show="tabs[2].isActive" :key="2" :selectedReminder="goToReminder" @validationError="showValidationError" @alert="alertReminder" />
 		</transition-group>
 	</main>
 
@@ -44,6 +43,7 @@
 	import Error from '@/components/Error.vue';
 
 	import gsap from 'gsap';
+	import axios from 'axios';
 
 	export default {
 		name: 'App',
@@ -51,37 +51,41 @@
 
 		mounted() {
 			// Only allow login when online
-			if (!navigator.onLine) {
+			if (!this.online) {
 				this.showLoginForm = false;
 			}
 
-			// Listen for iframe messages
-			window.addEventListener('message', this.handleMessages);
+			// Listen for iframe message
+			window.addEventListener('message', this.attemptLogin);
 		},
 
 		data() {
 			return {
+				// Logging In
+				loading: true,
+				online: navigator.onLine,
+				serverURL: process.env.NODE_ENV === 'development' ? 'http://localhost:5000/' : 'https://natscamp-money-manager.herokuapp.com',
+				showLoginForm: true,
+				isLoggedIn: false,
+
+				// Errors
+				renderError: false,
+				error: '',
+
+				// Alerts
+				alerts: [],
+				forceClose: false,
+
+				// Navigation
 				tabs: [
 					{ id: 0, name: 'Home', icon: '🏠', isActive: true },
 					{ id: 1, name: 'Entries', icon: '📔', isActive: false },
 					{ id: 2, name: 'Reminders', icon: '🔔', isActive: false },
 				],
-
-				loading: true,
-				showLoginForm: true,
-				loggedIn: false,
-
-				renderError: false,
-				error: '',
-
-				alerts: [],
-				forceClose: false,
-
 				goToEntry: {
 					_selectedEntry: '',
 					_showEntry: false,
 				},
-
 				goToReminder: {
 					_selectedRemId: '',
 					_selectedRemType: '',
@@ -110,7 +114,53 @@
 			},
 
 			// User methods
-			handleMessages(ev) {
+			async syncEntry({ method, data }) {
+				try {
+					// Exit if not online
+					if (!this.online) return;
+
+					// Perform operation
+					let res;
+
+					switch (method) {
+						case 'POST':
+							res = await this.sendRequest('/api/v1/entries', method, {
+								userGeneratedID: data.id,
+								title: data.title,
+								type: data.type,
+								amount: data.amount,
+								description: data.description,
+								dateCreated: data.date,
+							});
+
+							break;
+						case 'PUT':
+							res = await this.sendRequest(`/api/v1/entries/${data.id}`, method, {
+								userGeneratedID: data.id,
+								title: data.title,
+								type: data.type,
+								amount: data.amount,
+								description: data.description,
+								dateCreated: data.date,
+							});
+
+							break;
+
+						case 'DELETE':
+							res = await this.sendRequest(`/api/v1/entries/${data.id}`, method);
+							break;
+
+						default:
+							break;
+					}
+
+					if (res.status === 'success') data.isSynced = true;
+				} catch (error) {
+					this.showRequestError(error);
+				}
+			},
+
+			attemptLogin(ev) {
 				if (!ev.isTrusted || ev.origin !== 'https://natscamp-money-manager.herokuapp.com') return;
 
 				// Get data
@@ -120,19 +170,38 @@
 				if (data.status !== 'success' || !data.token) return;
 
 				// Get token and save to storage
-				sessionStorage.setItem('JWT', data.token);
+				this._token = data.token;
+				sessionStorage.setItem('JWT', this._token);
 
 				// Close form
 				this.showLoginForm = false;
-				this.loggedIn = true;
+				this.isLoggedIn = true;
+			},
+
+			async sendRequest(url, method, data = {}) {
+				const res = await axios({
+					headers: { Authorization: `Bearer ${this._token}` },
+					url,
+					baseURL: this.serverURL,
+					method,
+					data,
+				}).catch((err) => {
+					throw err;
+				});
+
+				return res.data;
 			},
 
 			// Error methods
-			showError(error) {
+			showValidationError(error) {
 				this.error = error;
 				this.renderError = true;
 
 				setTimeout(() => (this.renderError = false), 3000);
+			},
+
+			showRequestError(error) {
+				if (error.response) console.error(error.response);
 			},
 
 			// Alert methods
@@ -176,7 +245,6 @@
 			enter(el, done) {
 				gsap.to(el, { opacity: 1, duration: 0.5, onComplete: done });
 			},
-
 			leave(el, done) {
 				gsap.to(el, { opacity: 0, duration: 0.5, onComplete: done });
 			},

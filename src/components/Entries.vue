@@ -57,7 +57,7 @@
 
 						<label>Type*</label>
 						<select class="entry__type--input" v-model="entry.type">
-							<option value=""></option>
+							<option value="" selected disabled hidden></option>
 							<option value="income">Income</option>
 							<option value="expense">Expense</option>
 						</select>
@@ -89,7 +89,7 @@
 
 						<label>Type*</label>
 						<select class="entry__type--input" v-model="entry.type">
-							<option value=""></option>
+							<option value="" selected hidden disabled></option>
 							<option value="income">Income</option>
 							<option value="expense">Expense</option>
 						</select>
@@ -101,7 +101,7 @@
 						<textarea class="entry__description--input" v-model="entry.description" maxlength="255" wrap="hard" />
 
 						<div class="modal__buttons">
-							<button class="submit__btn" type="submit">Add</button>
+							<button class="submit__btn" type="submit">Save</button>
 							<button class="reset__btn" type="reset">Cancel</button>
 						</div>
 					</form>
@@ -119,10 +119,27 @@
 
 	export default {
 		name: 'Entries',
-
 		components: { Modal },
-
 		props: ['selectedEntry'],
+
+		mounted() {
+			// Loda data from storage
+			if (!localStorage.getItem('entries')) this.updateStorage();
+			this.entries = JSON.parse(localStorage.getItem('entries'));
+			this.entries.forEach((entry) => (entry.date = new Date(entry.date)));
+			this.entries.forEach((entry) => (entry.amount = +entry.amount));
+			this.balances = JSON.parse(localStorage.getItem('balances'));
+		},
+
+		updated() {
+			// Select entry
+			if (this.selectedEntry._selectedEntry && this.selectedEntry._showEntry) {
+				this.$refs.entryList.querySelectorAll(`li`).forEach((el) => {
+					if (el.id === this.selectedEntry._selectedEntry) el.scrollIntoView({ behavior: 'smooth' });
+				});
+			}
+			this.selectedEntry._showEntry = false;
+		},
 
 		data() {
 			return {
@@ -151,25 +168,6 @@
 			};
 		},
 
-		mounted() {
-			// Loda data from storage
-			if (!localStorage.getItem('entries')) this.updateStorage();
-			this.entries = JSON.parse(localStorage.getItem('entries'));
-			this.entries.forEach((entry) => (entry.date = new Date(entry.date)));
-			this.entries.forEach((entry) => (entry.amount = +entry.amount));
-			this.balances = JSON.parse(localStorage.getItem('balances'));
-		},
-
-		updated() {
-			// Select entry
-			if (this.selectedEntry._selectedEntry && this.selectedEntry._showEntry) {
-				this.$refs.entryList.querySelectorAll(`li`).forEach((el) => {
-					if (el.id === this.selectedEntry._selectedEntry) el.scrollIntoView({ behavior: 'smooth' });
-				});
-			}
-			this.selectedEntry._showEntry = false;
-		},
-
 		methods: {
 			// Entry methods
 			addEntry() {
@@ -179,10 +177,11 @@
 
 					// Generate additional entry info
 					this.entry.id = uuidv4();
+					this.entry.title = this.entry.title.trim();
 					this.entry.date = new Date();
 					this.entry.amount = +this.entry.amount;
-					this.entry.title = this.entry.title.trim();
 					this.entry.description = this.entry.description.trim();
+					this.entry.isSynced = false;
 
 					// Adds an entry
 					const entry = { ...this.entry };
@@ -193,6 +192,7 @@
 
 					// Update storage
 					this.updateStorage();
+					this.$emit('syncEntry', { method: 'POST', data: this.entry });
 
 					// Reset modal
 					this.resetModal();
@@ -201,27 +201,13 @@
 				}
 			},
 
-			deleteEntry(id) {
-				// Find entry
-				const entryIndex = this.entries.findIndex((entry) => entry.id === id);
-
-				// Remove entry
-				this.entries.splice(entryIndex, 1);
-
-				// Calculate balances
-				this.calculateBalances();
-
-				// Update storage
-				this.updateStorage();
-			},
-
 			editEntry(id, changeValues = false) {
 				if (!changeValues) {
 					// Get selected entry
 					this.oldEntry = this.entries.find((entry) => entry.id === id);
 
 					// Show modal with values
-					this.entry = Object.assign({}, this.oldEntry);
+					this.entry = { ...this.oldEntry };
 					this.showEditModal = true;
 				}
 
@@ -241,6 +227,7 @@
 
 						// Update storage
 						this.updateStorage();
+						this.$emit('syncEntry', { method: 'PUT', data: this.oldEntry });
 
 						// Reset modal
 						this.resetModal();
@@ -248,6 +235,20 @@
 						this.$emit('validationError', error);
 					}
 				}
+			},
+			deleteEntry(id) {
+				// Find entry
+				const entry = this.entries.find((entry) => entry.id === id);
+
+				// Remove entry
+				this.entries = this.entries.filter((e) => e.id !== entry.id);
+
+				// Calculate balances
+				this.calculateBalances();
+
+				// Update storage
+				this.updateStorage();
+				this.$emit('syncEntry', { method: 'DELETE', data: entry });
 			},
 
 			validateData() {
@@ -276,12 +277,16 @@
 			// Formatting Methods
 			formatDate(date) {
 				if (new Date().getDate() === date.getDate() && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) return `Today`;
-				else if (new Date().getDate() - 1 === date.getDate() && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) return 'Yesterday';
-				else if (new Date().getDate() - date.getDate() >= 2 && new Date().getDate() - date.getDate() < 7 && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) {
+
+				if (new Date().getDate() - 1 === date.getDate() && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) return 'Yesterday';
+
+				if (new Date().getDate() - date.getDate() >= 2 && new Date().getDate() - date.getDate() < 7 && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) {
 					for (let i = 2; i <= 6; i++) {
 						if (new Date().getDate() - i === date.getDate() && new Date().getMonth() === date.getMonth() && new Date().getFullYear() === date.getFullYear()) return `${i} days ago`;
 					}
-				} else return new Intl.DateTimeFormat(navigator.language).format(date);
+				}
+
+				return new Intl.DateTimeFormat(navigator.language).format(date);
 			},
 
 			formatAmount(amount) {
